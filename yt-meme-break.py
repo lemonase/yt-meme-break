@@ -53,6 +53,7 @@ def get_random_local_video(meme_dir):
     """ Plays local videos """
 
     full_vid_path = os.path.join(meme_dir, random.choice(os.listdir(meme_dir)))
+    print(full_vid_path)
 
     return full_vid_path
 
@@ -100,11 +101,19 @@ def main():
         "--directory",
         help="Play a video from a directory instead of youtube")
 
+    parser.add_argument(
+        "-o",
+        "--once",
+        default=False,
+        action="store_true",
+        help="Play a single video and quit",
+    )
+
     args = parser.parse_args()
 
     # set arg defaults
     sleep_minutes = 30
-    video_player_cmd = [get_default_player()]
+    video_player_cmd = list(get_default_player().split())
     user_directory = ""
 
     # gather args
@@ -117,16 +126,29 @@ def main():
     if args.directory:
         user_directory = args.directory
 
-    # main loop
-    while True:
-        time.sleep(sleep_minutes * 60)
-
+    # run once
+    if args.once:
         if user_directory:
             url = get_random_local_video(user_directory)
         else:
             url = get_random_yt_video()
 
-        subprocess.run(video_player_cmd + [url], check=False)
+        url = [url]
+
+        subprocess.run(video_player_cmd + url, check=False)
+    else:
+        # main loop
+        while True:
+            time.sleep(sleep_minutes * 60)
+
+            if user_directory:
+                url = get_random_local_video(user_directory)
+            else:
+                url = get_random_yt_video()
+
+            url = [url]
+
+            subprocess.run(video_player_cmd + url, check=False)
 
 
 if __name__ == "__main__":
