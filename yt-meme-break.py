@@ -66,7 +66,7 @@ def get_default_player():
     if sys.platform.startswith("darwin"):
         file_opener = "open"
     elif sys.platform.startswith("win32"):
-        file_opener = "explorer"
+        file_opener = "rundll32 url.dll,FileProtocolHandler"
     elif sys.platform.startswith("linux"):
         file_opener = "xdg-open"
     else:
@@ -91,8 +91,7 @@ def main():
     parser.add_argument(
         "-p",
         "--player",
-        help=
-        "The video player COMMAND you wish to use to play the youtube video",
+        help="The video player COMMAND you wish to use to play the youtube video",
         type=str,
     )
 
