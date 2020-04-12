@@ -10,7 +10,9 @@ import subprocess
 import sys
 import time
 
+import psutil
 from youtube_dl import YoutubeDL
+
 from playlists import MEME_PLAYLISTS
 
 
@@ -75,6 +77,22 @@ def get_default_player():
     return file_opener
 
 
+def kill_bg_processes():
+    """ Kills all python processes with 'yt-meme-break' in their argument list """
+
+    for proc in psutil.process_iter():
+        if proc.name().startswith("py"):
+            if proc.pid == os.getpid() or proc.pid == os.getppid():
+                continue
+            for arg in proc.cmdline():
+                if "yt-meme-break" in arg:
+                    print(f"Killing PID: {proc.pid}")
+                    try:
+                        proc.kill()
+                    except:
+                        print(f"Could not kill {proc.pid}")
+
+
 def main():
     """ Main func """
 
@@ -108,6 +126,13 @@ def main():
         help="Play a single video and quit",
     )
 
+    parser.add_argument(
+        "-k",
+        "--kill",
+        action="store_true",
+        help="Kill yt-meme-break process if it is running in the background"
+    )
+
     args = parser.parse_args()
 
     # set arg defaults
@@ -125,6 +150,10 @@ def main():
     if args.directory:
         user_directory = args.directory
 
+    if args.kill:
+        kill_bg_processes()
+        sys.exit(0)
+
     # run once
     if args.once:
         if user_directory:
@@ -137,6 +166,7 @@ def main():
         subprocess.run(video_player_cmd + url, check=False)
     else:
         # main loop
+        print(f"Starting with PID [{os.getpid()}]")
         while True:
             time.sleep(sleep_minutes * 60)
 
