@@ -2,19 +2,21 @@
 
 A fun reminder to take a break from sitting and staring at a monitor.
 
-## This script depends on [youtube-dl](https://github.com/ytdl-org/youtube-dl/).
+## This script uses [youtube-dl](https://github.com/ytdl-org/youtube-dl/)
 
-### Installing youtube-dl
+**NOTE:** youtube-dl is used only to get playlist information, and does not
+actually download any videos
 
-If you have pip or homebrew, you can:
-`pip install youtube_dl` or `brew install youtube-dl`
+## Installation
 
-*NOTE:* youtube-dl is used only to get playlist information, and does not actually download any videos
+```sh
+pip install -r requirements.txt
+```
 
 ## Usage
 
-```
-usage: yt-meme-break.py [-h] [-t TIME] [-p PLAYER] [-d DIRECTORY]
+```txt
+usage: yt-meme-break.py [-h] [-t TIME] [-p PLAYER] [-d DIRECTORY] [-o] [-k]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -23,6 +25,8 @@ optional arguments:
                         The video player COMMAND you wish to use to play the youtube video
   -d DIRECTORY, --directory DIRECTORY
                         Play a video from a directory instead of youtube
+  -o, --once            Play a single video and quit
+  -k, --kill            Kill yt-meme-break process if it is running in the background
 ```
 
 ## Running in the background
@@ -35,7 +39,13 @@ On Linux or macOS, you can simply run:
 python yt-meme-break.py &
 ```
 
-To kill the process, you can run
+To kill the process, you can run either:
+
+```sh
+python yt-meme-break.py -k
+```
+
+or
 
 ```sh
 pkill -f yt-meme-break.py
@@ -43,13 +53,13 @@ pkill -f yt-meme-break.py
 
 ### Windows
 
-On Windows, you can use the `pythonw.exe` interperter
+On Windows, you can use the `pythonw.exe` interperter to run in the background
 
-```cmd
-pythonw yt-meme-break.py
+```sh
+pythonw.exe yt-meme-break.py
 ```
 
-To kill the process, you can use Task Manager.
+To kill the process, you can use Task Manager or run `yt-meme-break.py -k`
 
 ## Videos
 
