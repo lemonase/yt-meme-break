@@ -68,6 +68,7 @@ def get_default_player():
     if sys.platform.startswith("darwin"):
         file_opener = "open"
     elif sys.platform.startswith("win32"):
+        # TODO look into using os.startfile() as it might be a better solution
         file_opener = "rundll32 url.dll,FileProtocolHandler"
     elif sys.platform.startswith("linux"):
         file_opener = "xdg-open"
