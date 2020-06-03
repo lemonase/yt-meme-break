@@ -40,11 +40,12 @@ def get_random_yt_video():
     """ Picks a random video from a choice of meme_playlists """
 
     yt_watch_prefix = "https://www.youtube.com/watch?v="
+    random_pl = random.choice(MEME_PLAYLISTS)
 
     # get playlist info for a random playlist
-    pl_info = get_playlist_info(random.choice(MEME_PLAYLISTS))
+    pl_info = get_playlist_info(random_pl)
 
-    # get random entry from the playlist
+    # get random url from entries in the playlist
     random_video_url = yt_watch_prefix + str(
         random.choice(pl_info["entries"])["url"])
 
@@ -55,7 +56,6 @@ def get_random_local_video(meme_dir):
     """ Plays local videos """
 
     full_vid_path = os.path.join(meme_dir, random.choice(os.listdir(meme_dir)))
-    print(full_vid_path)
 
     return full_vid_path
 
@@ -110,7 +110,8 @@ def main():
     parser.add_argument(
         "-p",
         "--player",
-        help="The video player COMMAND you wish to use to play the youtube video",
+        help=
+        "The video player COMMAND you wish to use to play the youtube video",
         type=str,
     )
 
@@ -131,7 +132,7 @@ def main():
         "-k",
         "--kill",
         action="store_true",
-        help="Kill yt-meme-break process if it is running in the background"
+        help="Kill yt-meme-break process if it is running in the background",
     )
 
     args = parser.parse_args()
