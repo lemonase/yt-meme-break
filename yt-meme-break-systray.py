@@ -1,28 +1,28 @@
 #!/usr/bin/env python
 from datetime import datetime, timedelta
+import logging
+import os
 import random
 import subprocess
 import sys
 import time
 
 from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers import SchedulerNotRunningError
 import pystray
 from PIL import Image, ImageDraw, ImageColor
 
 from playlists import MEME_PLAYLISTS
 from youtube_dl import YoutubeDL
 
-# times
+BREAK_INTERVAL_MIN = 30
+TICK_INTERVAL_SEC = 5
 seconds_passed = 0
-break_interval = 30
-tick_interval = 1
 
-# datetimes
 start_datetime = datetime.now()
-stop_datetime = timedelta(minutes=break_interval)
+stop_datetime = timedelta(minutes=BREAK_INTERVAL_MIN)
 stop_seconds = timedelta.total_seconds(stop_datetime)
 
-# scheduler
 scheduler = BackgroundScheduler()
 
 
@@ -41,14 +41,18 @@ def get_playlist_info(playlist_url):
     ydl.add_default_info_extractors()
 
     # get video info
-    info = ydl.extract_info(playlist_url, download=False)
+    try:
+        info = ydl.extract_info(playlist_url, download=False)
+    except:
+        logging.error("Erorr getting playlist info")
 
     return info
 
 
-def get_random_yt_video():
+def get_yt_meme_url():
     """ Picks a random video from a choice of meme_playlists """
 
+    # get the randy playlist
     yt_watch_prefix = "https://www.youtube.com/watch?v="
     random_pl = random.choice(MEME_PLAYLISTS)
 
@@ -59,7 +63,7 @@ def get_random_yt_video():
     random_video_url = yt_watch_prefix + str(
         random.choice(pl_info["entries"])["url"])
 
-    return random_video_url
+    return str(random_video_url)
 
 
 def pause_timer():
@@ -92,8 +96,12 @@ def set_interval(minutes):
 
 
 def exit_app():
-    scheduler.shutdown()
-    sys.exit()
+    try:
+        scheduler.shutdown(wait=False)
+    except SchedulerNotRunningError as E:
+        print("Scheduler Erorr:", E)
+
+    os._exit(1)
 
 
 def create_icon():
@@ -122,9 +130,23 @@ def create_icon():
     return icon
 
 
-def update_menus(icon):
-    # print('Time Passed: {}:{}'.format(get_min_passed(), get_sec_passed()))
+def open_video():
+    yt_vid = get_yt_meme_url()
 
+    try:
+        if sys.platform.startswith("darwin"):
+            subprocess.run(["open", yt_vid], check=False)
+        elif sys.platform.startswith("win32"):
+            os.startfile(yt_vid)
+        elif sys.platform.startswith("linux"):
+            subprocess.run(["xdg-open", yt_vid], check=False)
+        else:
+            sys.exit("Unknown platform")
+    except:
+        print("Error Opening Video")
+
+
+def update_menus(icon):
     # menu must be converted to a list to be mutable
     menu_list = list(icon.menu)
     menu_list[3] = pystray.MenuItem(
@@ -133,33 +155,25 @@ def update_menus(icon):
     icon.menu = tuple(menu_list)
 
 
-def open_video():
-    yt_vid = get_random_yt_video()
-    cmd = ["chromium", str(yt_vid)]
-    print("Opening youtube video: ", yt_vid)
-    subprocess.run(cmd, check=False)
-
-
-def tick(interval):
+def tick(interval, icon):
     global seconds_passed
     seconds_passed = seconds_passed + interval
 
+    update_menus(icon)
+
     if seconds_passed >= stop_seconds:
         open_video()
+        icon.notify("Get up and stretch!")
         reset_timer()
 
 
 def init_schedulers(picon):
-    global scheduler, tick_interval
-    scheduler.add_job(tick,
-                      'interval', (tick_interval, ),
-                      seconds=tick_interval)
-    scheduler.add_job(update_menus,
-                      'interval', (picon, ),
-                      seconds=tick_interval)
-
-    # start tick timer and run pystray
     scheduler.start()
+
+    scheduler.add_job(tick,
+                      'interval', (TICK_INTERVAL_SEC, picon),
+                      seconds=TICK_INTERVAL_SEC, id="TICK")
+
     picon.run()
 
 
