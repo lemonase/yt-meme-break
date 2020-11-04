@@ -11,60 +11,43 @@ import sys
 import time
 
 import psutil
-from youtube_dl import YoutubeDL
+import requests
 
-from playlists import MEME_PLAYLISTS
+api_url = "https://youtube-meme-api.herokuapp.com"
+video_url_prefix = "https://www.youtube.com/watch?v="
 
+endpoints = {
+    "video": "/api/v1/random/video",
+    "playlist": "/api/v1/random/playlist",
+    "playlist_item": "/api/v1/random/playlist/item",
+    "channel": "/api/v1/random/channel",
+}
 
-def get_playlist_info(playlist_url):
-    """ Takes a url for a playlist and returns info about it """
-    # setup ydl options
-    ydl_opts = {
-        "simulate": True,
-        "ignore_errors": True,
-        "extract_flat": True,
-        "quiet": True,
-    }
-
-    # init YoutubeDL object
-    ydl = YoutubeDL(ydl_opts)
-    ydl.add_default_info_extractors()
-
-    # get video info
-    info = ydl.extract_info(playlist_url, download=False)
-
-    return info
+aggregate_endpoints = {
+    "video": "/api/v1/all/video",
+    "playlist": "/api/v1/all/playlist",
+    "playlist_item": "/api/v1/all/playlist/item",
+    "channel": "/api/v1/all/channel",
+}
 
 
 def get_random_yt_video():
-    """ Picks a random video from a choice of meme_playlists """
+    """ Picks a random youtube video from api """
+    r = requests.get(api_url + endpoints["playlist_item"])
+    r.raise_for_status()
+    vid_id = r.json()["contentDetails"]["videoId"]
 
-    yt_watch_prefix = "https://www.youtube.com/watch?v="
-    random_pl = random.choice(MEME_PLAYLISTS)
-
-    # get playlist info for a random playlist
-    pl_info = get_playlist_info(random_pl)
-
-    # get random url from entries in the playlist
-    random_video_url = yt_watch_prefix + str(
-        random.choice(pl_info["entries"])["url"])
-
-    return random_video_url
+    return video_url_prefix + vid_id
 
 
 def get_random_local_video(meme_dir):
     """ Plays local videos """
-
-    full_vid_path = os.path.join(meme_dir, random.choice(os.listdir(meme_dir)))
-
-    return full_vid_path
+    return os.path.join(meme_dir, random.choice(os.listdir(meme_dir)))
 
 
 def get_default_player():
     """ Returns the default 'file opener' for each platform """
-
     file_opener = ""
-
     if sys.platform.startswith("darwin"):
         file_opener = "open"
     elif sys.platform.startswith("win32"):
@@ -73,13 +56,11 @@ def get_default_player():
         file_opener = "xdg-open"
     else:
         sys.exit("Unknown platform")
-
     return file_opener
 
 
 def kill_bg_processes():
     """ Kills all python processes with 'yt-meme-break' in their argument list """
-
     for proc in psutil.process_iter():
         if proc.name().startswith("py"):
             if proc.pid == os.getpid() or proc.pid == os.getppid():
@@ -95,29 +76,20 @@ def kill_bg_processes():
 
 def main():
     """ Main func """
-
-    # set up argparse
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "-t",
-        "--time",
-        help="The time to wait in minutes (default is 30)",
-        type=int,
+        "-t", "--time", help="The time to wait in minutes (default is 30)", type=int,
     )
-
     parser.add_argument(
         "-p",
         "--player",
         help="The video player COMMAND you wish to use to play the youtube video",
         type=str,
     )
-
     parser.add_argument(
-        "-d",
-        "--directory",
-        help="Play a video from a directory instead of youtube")
-
+        "-d", "--directory", help="Play a video from a directory instead of youtube"
+    )
     parser.add_argument(
         "-o",
         "--once",
@@ -125,7 +97,6 @@ def main():
         action="store_true",
         help="Play a single video and quit",
     )
-
     parser.add_argument(
         "-k",
         "--kill",

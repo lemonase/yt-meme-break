@@ -1,19 +1,17 @@
 #!/usr/bin/env python
-from datetime import datetime, timedelta
 import logging
 import os
 import random
 import subprocess
 import sys
 import time
+from datetime import datetime, timedelta
 
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.schedulers import SchedulerNotRunningError
 import pystray
-from PIL import Image, ImageDraw, ImageColor
-
-from playlists import MEME_PLAYLISTS
-from youtube_dl import YoutubeDL
+import requests
+from apscheduler.schedulers import SchedulerNotRunningError
+from apscheduler.schedulers.background import BackgroundScheduler
+from PIL import Image, ImageColor, ImageDraw
 
 BREAK_INTERVAL_MIN = 30
 TICK_INTERVAL_SEC = 5
@@ -25,45 +23,31 @@ stop_seconds = timedelta.total_seconds(stop_datetime)
 
 scheduler = BackgroundScheduler()
 
+api_url = "https://youtube-meme-api.herokuapp.com"
+video_url_prefix = "https://www.youtube.com/watch?v="
 
-def get_playlist_info(playlist_url):
-    """ Takes a url for a playlist and returns info about it """
-    # setup ydl options
-    ydl_opts = {
-        "simulate": True,
-        "ignore_errors": True,
-        "extract_flat": True,
-        "quiet": True,
-    }
+endpoints = {
+    "video": "/api/v1/random/video",
+    "playlist": "/api/v1/random/playlist",
+    "playlist_item": "/api/v1/random/playlist/item",
+    "channel": "/api/v1/random/channel",
+}
 
-    # init YoutubeDL object
-    ydl = YoutubeDL(ydl_opts)
-    ydl.add_default_info_extractors()
-
-    # get video info
-    try:
-        info = ydl.extract_info(playlist_url, download=False)
-    except:
-        logging.error("Erorr getting playlist info")
-
-    return info
+aggregate_endpoints = {
+    "video": "/api/v1/all/video",
+    "playlist": "/api/v1/all/playlist",
+    "playlist_item": "/api/v1/all/playlist/item",
+    "channel": "/api/v1/all/channel",
+}
 
 
-def get_yt_meme_url():
-    """ Picks a random video from a choice of meme_playlists """
+def get_random_yt_video():
+    """ Picks a random video from api """
+    r = requests.get(api_url + endpoints["playlist_item"])
+    r.raise_for_status()
+    vid_id = r.json()["contentDetails"]["videoId"]
 
-    # get the randy playlist
-    yt_watch_prefix = "https://www.youtube.com/watch?v="
-    random_pl = random.choice(MEME_PLAYLISTS)
-
-    # get playlist info for a random playlist
-    pl_info = get_playlist_info(random_pl)
-
-    # get random url from entries in the playlist
-    random_video_url = yt_watch_prefix + str(
-        random.choice(pl_info["entries"])["url"])
-
-    return str(random_video_url)
+    return video_url_prefix + vid_id
 
 
 def pause_timer():
@@ -106,32 +90,36 @@ def exit_app():
 
 def create_icon():
     # create images
-    pyimg = Image.open('images/py.png')
+    pyimg = Image.open("images/py.png")
     pyimg.thumbnail((128, 128))
 
     # create menus
-    menu = (pystray.MenuItem('Pause Timer', pause_timer),
-            pystray.MenuItem('Resume Timer', resume_timer),
-            pystray.MenuItem('Reset Timer', reset_timer),
-            pystray.MenuItem(
-                'Time Passed: {}min {}sec'.format(get_min_passed(),
-                                                  get_sec_passed()),
-                get_sec_passed),
-            pystray.MenuItem(
-                'Break Interval {}min {}sec'.format(get_interval() // 60,
-                                                    get_interval() % 60),
-                set_interval),
-            pystray.MenuItem('Quit', exit_app))
+    menu = (
+        pystray.MenuItem("Pause Timer", pause_timer),
+        pystray.MenuItem("Resume Timer", resume_timer),
+        pystray.MenuItem("Reset Timer", reset_timer),
+        pystray.MenuItem(
+            "Time Passed: {}min {}sec".format(get_min_passed(), get_sec_passed()),
+            get_sec_passed,
+        ),
+        pystray.MenuItem(
+            "Break Interval {}min {}sec".format(
+                get_interval() // 60, get_interval() % 60
+            ),
+            set_interval,
+        ),
+        pystray.MenuItem("Quit", exit_app),
+    )
 
     # create icon
-    icon = pystray.Icon('YT Timer', pyimg, 'YT Timer', menu)
+    icon = pystray.Icon("YT Timer", pyimg, "YT Timer", menu)
     icon.visible = True
 
     return icon
 
 
 def open_video():
-    yt_vid = get_yt_meme_url()
+    yt_vid = get_random_yt_video()
 
     try:
         if sys.platform.startswith("darwin"):
@@ -150,8 +138,9 @@ def update_menus(icon):
     # menu must be converted to a list to be mutable
     menu_list = list(icon.menu)
     menu_list[3] = pystray.MenuItem(
-        'Time Passed: {}min {}sec'.format(get_min_passed(), get_sec_passed()),
-        get_sec_passed)
+        "Time Passed: {}min {}sec".format(get_min_passed(), get_sec_passed()),
+        get_sec_passed,
+    )
     icon.menu = tuple(menu_list)
 
 
@@ -170,9 +159,13 @@ def tick(interval, icon):
 def init_schedulers(picon):
     scheduler.start()
 
-    scheduler.add_job(tick,
-                      'interval', (TICK_INTERVAL_SEC, picon),
-                      seconds=TICK_INTERVAL_SEC, id="TICK")
+    scheduler.add_job(
+        tick,
+        "interval",
+        (TICK_INTERVAL_SEC, picon),
+        seconds=TICK_INTERVAL_SEC,
+        id="TICK",
+    )
 
     picon.run()
 
@@ -182,5 +175,5 @@ def main():
     init_schedulers(picon)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
