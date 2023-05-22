@@ -2,4 +2,4 @@ psutil==5.7.0
 Pillow==7.1.2
 pystray==0.16.0
 APScheduler==3.6.3
-requests==2.22.0
+requests==2.31.0
